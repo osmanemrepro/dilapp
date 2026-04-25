@@ -21,7 +21,7 @@ const wordDatabase: Record<string, any[]> = {
     { id: '17', word: 'Car', translation: 'Araba', pronunciation: '/kɑːr/', example: 'I drive a car.', category: 'travel', difficulty: 'easy', mastered: false },
     { id: '18', word: 'Airport', translation: 'Havalimanı', pronunciation: '/ˈerpɔːrt/', example: 'The airport is far.', category: 'travel', difficulty: 'medium', mastered: false },
     { id: '19', word: 'Hotel', translation: 'Otel', pronunciation: '/hoʊˈtel/', example: 'I stayed at a hotel.', category: 'travel', difficulty: 'easy', mastered: false },
-    { id: '20', word: 'Restaurant', translation: 'Restoran', pronunciation: '/ˈrestərɑːnt/', example: 'Let's go to a restaurant.', category: 'food', difficulty: 'medium', mastered: false }
+    { id: '20', word: 'Restaurant', translation: 'Restoran', pronunciation: '/ˈrestərɑːnt/', example: `Let's go to a restaurant.`, category: 'food', difficulty: 'medium', mastered: false }
   ],
   es: [
     { id: '1', word: 'Hola', translation: 'Merhaba', pronunciation: '/ˈola/', example: '¡Hola! ¿Cómo estás?', category: 'greeting', difficulty: 'easy', mastered: false },
