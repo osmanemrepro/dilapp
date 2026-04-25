@@ -1,209 +1,477 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, Zap, Globe, Rocket, Code, Palette } from "lucide-react";
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Languages, 
+  BookOpen, 
+  Brain, 
+  Trophy, 
+  Star, 
+  ArrowRight, 
+  Volume2,
+  RotateCcw,
+  CheckCircle2,
+  TrendingUp,
+  Flame,
+  Target,
+  Loader2
+} from 'lucide-react';
+
+type Language = {
+  id: string;
+  code: string;
+  name: string;
+  flag: string;
+  level: string;
+  progress: number;
+  wordsLearned: number;
+};
+
+type Flashcard = {
+  id: string;
+  word: string;
+  translation: string;
+  example: string;
+  pronunciation: string;
+  category?: string;
+  difficulty?: string;
+  mastered: boolean;
+};
+
+type UserProgress = {
+  xp: number;
+  streak: number;
+  dailyGoal: number;
+  dailyCompleted: number;
+  languages: Record<string, { wordsLearned: number; progress: number }>;
+};
+
+type View = 'home' | 'flashcards' | 'loading';
+
+export default function LanguageLearningApp() {
+  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
+  const [currentView, setCurrentView] = useState<View>('home');
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [streak, setStreak] = useState(7);
+  const [xp, setXp] = useState(1250);
+  const [dailyGoal, setDailyGoal] = useState(3);
+  const [dailyCompleted, setDailyCompleted] = useState(2);
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch languages on mount
+  useEffect(() => {
+    fetchLanguages();
+    fetchProgress();
+  }, []);
+
+  // Fetch flashcards when language is selected
+  useEffect(() => {
+    if (selectedLanguage) {
+      fetchFlashcards(selectedLanguage.code);
+    }
+  }, [selectedLanguage]);
+
+  const fetchLanguages = async () => {
+    try {
+      const response = await fetch('/api/languages');
+      const data = await response.json();
+      setLanguages(data);
+    } catch (error) {
+      console.error('Failed to fetch languages:', error);
+    }
+  };
+
+  const fetchProgress = async () => {
+    try {
+      const response = await fetch('/api/progress');
+      const data: UserProgress = await response.json();
+      setXp(data.xp);
+      setStreak(data.streak);
+      setDailyGoal(data.dailyGoal);
+      setDailyCompleted(data.dailyCompleted);
+    } catch (error) {
+      console.error('Failed to fetch progress:', error);
+    }
+  };
+
+  const fetchFlashcards = async (languageCode: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/words?language=${languageCode}&limit=10`);
+      const data = await response.json();
+      setFlashcards(data);
+      setCurrentCardIndex(0);
+      setShowTranslation(false);
+    } catch (error) {
+      console.error('Failed to fetch flashcards:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateProgress = async (action: string) => {
+    try {
+      const response = await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          language: selectedLanguage?.code,
+          xp: 10
+        })
+      });
+      const data: UserProgress = await response.json();
+      setXp(data.xp);
+      setStreak(data.streak);
+      setDailyGoal(data.dailyGoal);
+      setDailyCompleted(data.dailyCompleted);
+    } catch (error) {
+      console.error('Failed to update progress:', error);
+    }
+  };
+
+  const handleSelectLanguage = (lang: Language) => {
+    setSelectedLanguage(lang);
+    setCurrentView('flashcards');
+  };
+
+  const handleFlipCard = () => {
+    setShowTranslation(!showTranslation);
+  };
+
+  const handleNextCard = () => {
+    updateProgress('complete_flashcard');
+    setShowTranslation(false);
+    setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
+  };
+
+  const handleResetProgress = () => {
+    setCurrentCardIndex(0);
+    setShowTranslation(false);
+  };
+
+  const renderLoadingView = () => (
+    <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+      <Loader2 className="h-12 w-12 animate-spin text-zinc-900 dark:text-zinc-50" />
+      <p className="text-zinc-600 dark:text-zinc-400">Yükleniyor...</p>
+    </div>
+  );
+
+  const currentCard = flashcards[currentCardIndex];
+
+  const renderHomeView = () => (
+    <div className="space-y-6">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-orange-500 to-amber-500 border-0 text-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Flame className="h-5 w-5" />
+              <span className="text-sm font-medium">Streak</span>
+            </div>
+            <div className="text-3xl font-bold">{streak} gün</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500 to-violet-500 border-0 text-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Trophy className="h-5 w-5" />
+              <span className="text-sm font-medium">XP</span>
+            </div>
+            <div className="text-3xl font-bold">{xp.toLocaleString()}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Daily Goal */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Günlük Hedef
+            </CardTitle>
+            <Badge variant="secondary">
+              {dailyCompleted}/{dailyGoal}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-3 mb-2">
+            <div 
+              className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all"
+              style={{ width: `${(dailyCompleted / dailyGoal) * 100}%` }}
+            />
+          </div>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            {dailyCompleted >= dailyGoal ? '🎉 Hedef tamamladın!' : `${dailyGoal - dailyCompleted} ders kaldı`}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Continue Learning */}
+      {selectedLanguage && (
+        <Card className="border-2 border-zinc-200 dark:border-zinc-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Öğrenmeye Devam Et
+            </CardTitle>
+            <CardDescription>
+              {selectedLanguage.flag} {selectedLanguage.name} - {selectedLanguage.level}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium">{selectedLanguage.progress}% tamamlandı</span>
+              </div>
+              <Badge variant="outline">{selectedLanguage.wordsLearned} kelime</Badge>
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={() => setCurrentView('flashcards')}
+            >
+              Devam Et
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Languages Grid */}
+      <div>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <Languages className="h-5 w-5" />
+          Dil Seç
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          {languages.map((lang) => (
+            <Card 
+              key={lang.id}
+              className={`cursor-pointer transition-all hover:scale-105 ${
+                selectedLanguage?.id === lang.id 
+                  ? 'border-2 border-zinc-900 dark:border-zinc-50' 
+                  : 'border-2 border-zinc-200 dark:border-zinc-800'
+              }`}
+              onClick={() => handleSelectLanguage(lang)}
+            >
+              <CardContent className="p-4">
+                <div className="text-3xl mb-2">{lang.flag}</div>
+                <h3 className="font-semibold text-sm">{lang.name}</h3>
+                <div className="flex items-center justify-between mt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {lang.level}
+                  </Badge>
+                  <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                    {lang.progress}%
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFlashcardsView = () => {
+    if (isLoading) {
+      return renderLoadingView();
+    }
+
+    if (!currentCard) {
+      return (
+        <div className="text-center space-y-4">
+          <p className="text-zinc-600 dark:text-zinc-400">Kart bulunamadı.</p>
+          <Button variant="outline" onClick={() => setCurrentView('home')}>
+            ← Geri Dön
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setCurrentView('home')}
+          >
+            ← Geri
+          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">
+              {selectedLanguage?.flag} {selectedLanguage?.name}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
+          <span>Kart {currentCardIndex + 1}/{flashcards.length}</span>
+          <span className="flex items-center gap-1">
+            <Trophy className="h-4 w-4" />
+            {xp} XP
+          </span>
+        </div>
+
+        {/* Flashcard */}
+        <Card 
+          className={`min-h-[320px] cursor-pointer transition-all hover:scale-[1.02] ${
+            showTranslation ? 'bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-50 dark:to-zinc-100' : 'bg-white dark:bg-zinc-950'
+          }`}
+          onClick={handleFlipCard}
+        >
+          <CardContent className="p-6 flex flex-col items-center justify-center h-full">
+            {!showTranslation ? (
+              <div className="text-center space-y-4">
+                <div className="text-4xl mb-4">{selectedLanguage?.flag}</div>
+                <h2 className="text-3xl font-bold">{currentCard.word}</h2>
+                {currentCard.pronunciation && (
+                  <p className="text-zinc-500 dark:text-zinc-400">
+                    {currentCard.pronunciation}
+                  </p>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // TTS would go here
+                  }}
+                >
+                  <Volume2 className="h-4 w-4 mr-2" />
+                  Dinle
+                </Button>
+                <p className="text-xs text-zinc-400 mt-4">
+                  Çevirmek için tıkla
+                </p>
+              </div>
+            ) : (
+              <div className="text-center space-y-4">
+                <div className="text-4xl mb-4">🇹🇷</div>
+                <h2 className="text-3xl font-bold text-white dark:text-zinc-900">
+                  {currentCard.translation}
+                </h2>
+                {currentCard.example && (
+                  <p className="text-zinc-300 dark:text-zinc-600 italic">
+                    "{currentCard.example}"
+                  </p>
+                )}
+                {currentCard.mastered && (
+                  <Badge variant="secondary" className="bg-green-500 text-white">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Öğrenildi
+                  </Badge>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            className="flex-1"
+            onClick={handleResetProgress}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Sıfırla
+          </Button>
+          <Button 
+            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+            onClick={handleNextCard}
+          >
+            Sonraki
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+
+        {/* Card Progress Dots */}
+        <div className="flex justify-center gap-2">
+          {flashcards.map((_, index) => (
+            <div
+              key={index}
+              className={`w-2 h-2 rounded-full transition-all ${
+                index === currentCardIndex 
+                  ? 'w-6 bg-zinc-900 dark:bg-zinc-50' 
+                  : 'bg-zinc-300 dark:bg-zinc-700'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          <Card className="text-center p-3">
+            <div className="text-2xl font-bold text-green-500">
+              {flashcards.filter(c => c.mastered).length}
+            </div>
+            <div className="text-xs text-zinc-600 dark:text-zinc-400">Öğrenildi</div>
+          </Card>
+          <Card className="text-center p-3">
+            <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+              {flashcards.length}
+            </div>
+            <div className="text-xs text-zinc-600 dark:text-zinc-400">Toplam</div>
+          </Card>
+          <Card className="text-center p-3">
+            <div className="text-2xl font-bold text-purple-500">
+              {flashcards.length > 0 ? Math.round((flashcards.filter(c => c.mastered).length / flashcards.length) * 100) : 0}%
+            </div>
+            <div className="text-xs text-zinc-600 dark:text-zinc-400">Başarı</div>
+          </Card>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-zinc-50 to-white dark:from-black dark:to-zinc-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-zinc-50 to-white dark:from-black dark:to-zinc-900">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-zinc-950/80 sticky top-0 z-50">
         <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Smartphone className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
+          <div className="flex h-14 items-center justify-between">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('home')}>
+              <Brain className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
               <span className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-                MobilUygulama
+                LucidaClone
               </span>
             </div>
-            <Button variant="ghost" size="sm" className="text-zinc-600 dark:text-zinc-400">
-              Başla
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                {xp}
+              </Badge>
+            </div>
           </div>
         </nav>
       </header>
 
-      {/* Hero Section */}
-      <main className="flex-1">
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-28">
-          <div className="text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm">
-              <Zap className="h-4 w-4 text-zinc-900 dark:text-zinc-50" />
-              <span className="text-zinc-700 dark:text-zinc-300 font-medium">
-                Next.js + Tailwind CSS ile Modern Web Uygulaması
-              </span>
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
-              Mobil Uygulama
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-600 to-zinc-400 dark:from-zinc-300 dark:to-zinc-500">
-                {" "}Nasıl Yapılır?
-              </span>
-            </h1>
-
-            <p className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-600 dark:text-zinc-400 px-4">
-              Next.js 16 ve modern web teknolojileri ile mobil uyumlu, hızlı ve kullanıcı dostu web uygulamaları geliştirin.
-              Tüm cihazlarda mükemmel görünen, responsive tasarımlar oluşturun.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Button size="lg" className="w-full sm:w-auto px-8 h-12 text-base">
-                <Rocket className="mr-2 h-5 w-5" />
-                Hemen Başla
-              </Button>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto px-8 h-12 text-base">
-                <Code className="mr-2 h-5 w-5" />
-                Kodları Gör
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Grid */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-              Neden Next.js ile Mobil Uygulama?
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto">
-              Modern web teknolojileri ile native benzeri deneyim sunun
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="border-2 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader>
-                <div className="h-12 w-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                  <Smartphone className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
-                </div>
-                <CardTitle className="text-lg">Responsive Tasarım</CardTitle>
-                <CardDescription>
-                  Mobile-first yaklaşımı ile tüm ekran boyutlarında mükemmel görünen tasarımlar
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader>
-                <div className="h-12 w-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
-                </div>
-                <CardTitle className="text-lg">Hızlı Performans</CardTitle>
-                <CardDescription>
-                  Otomatik optimizasyon, kod bölmeleri ve sunucu bileşenleriyle süper hız
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader>
-                <div className="h-12 w-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                  <Globe className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
-                </div>
-                <CardTitle className="text-lg">Cross-Platform</CardTitle>
-                <CardDescription>
-                  Tek kod tabanı ile iOS, Android ve tüm tarayıcılarda çalışır
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader>
-                <div className="h-12 w-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                  <Code className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
-                </div>
-                <CardTitle className="text-lg">Modern Teknoloji</CardTitle>
-                <CardDescription>
-                  React, TypeScript, Tailwind CSS ile geliştirme kolaylığı
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader>
-                <div className="h-12 w-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                  <Palette className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
-                </div>
-                <CardTitle className="text-lg">shadcn/ui Bileşenleri</CardTitle>
-                <CardDescription>
-                  Hazır, özelleştirilebilir ve erişilebilir UI bileşenleri
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border-2 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
-              <CardHeader>
-                <div className="h-12 w-12 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                  <Rocket className="h-6 w-6 text-zinc-900 dark:text-zinc-50" />
-                </div>
-                <CardTitle className="text-lg">Kolay Dağıtım</CardTitle>
-                <CardDescription>
-                  App Store'a gerek yok, URL ile erişim ve PWA desteği
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </section>
-
-        {/* Steps Section */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl mb-8">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-              Nasıl Başlarım?
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto">
-              4 basit adımda mobil uyumlu web uygulamanı oluştur
-            </p>
-          </div>
-
-          <div className="max-w-4xl mx-auto space-y-6">
-            {[
-              {
-                step: "1",
-                title: "Next.js Projesi Başlat",
-                description: "Terminal'de `bunx create-next-app@latest my-app` komutunu çalıştır"
-              },
-              {
-                step: "2",
-                title: "Tailwind CSS Kur",
-                description: "Modern responsive tasarım için Tailwind CSS'i yapılandır"
-              },
-              {
-                step: "3",
-                title: "Bileşenler Ekle",
-                description: "shadcn/ui gibi bileşen kütüphaneleri ile hızlı geliştirme"
-              },
-              {
-                step: "4",
-                title: "Test ve Dağıt",
-                description: "Mobil testler yap ve Vercel'e deploy et"
-              }
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-4 p-6 bg-white dark:bg-zinc-950 rounded-xl border-2 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
-              >
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 flex items-center justify-center font-bold text-lg">
-                  {item.step}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-zinc-600 dark:text-zinc-400">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* Main Content */}
+      <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {currentView === 'home' && renderHomeView()}
+        {currentView === 'flashcards' && renderFlashcardsView()}
+        {currentView === 'loading' && renderLoadingView()}
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white dark:bg-zinc-950 py-8 mt-auto">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-zinc-600 dark:text-zinc-400 text-sm">
-            © 2025 MobilUygulama. Next.js 16 ile geliştirildi.
+      <footer className="border-t bg-white dark:bg-zinc-950 py-4 mt-auto">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Lucida benzeri dil öğrenme uygulaması
           </p>
         </div>
       </footer>

@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Language {
+  id          String   @id @default(cuid())
+  code        String   @unique // en, es, de, fr
+  name        String   // English, Spanish, German, French
+  flag        String   // 🇬🇧, 🇪🇸, 🇩🇪, 🇫🇷
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  words       Word[]
+  flashcards  Flashcard[]
+  lessons     Lesson[]
+  progress    UserProgress[]
+}
+
+model Word {
+  id              String    @id @default(cuid())
+  languageId      String
+  word            String
+  translation     String
+  pronunciation   String?
+  example         String?
+  category        String?   // greeting, food, travel, etc.
+  difficulty      String?   // easy, medium, hard
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  language        Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  flashcards      Flashcard[]
+}
+
+model Flashcard {
+  id              String    @id @default(cuid())
+  languageId      String
+  wordId          String
+  userId          String?   // Optional user-specific flashcard
+  mastered        Boolean   @default(false)
+  reviewCount     Int       @default(0)
+  lastReviewedAt  DateTime?
+  nextReviewAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  language        Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  word            Word      @relation(fields: [wordId], references: [id], onDelete: Cascade)
+}
+
+model Lesson {
+  id            String    @id @default(cuid())
+  languageId    String
+  title         String
+  description   String?
+  level         String    // beginner, intermediate, advanced
+  order         Int
+  wordsCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  language      Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  progress      UserProgress[]
+}
+
+model UserProgress {
+  id            String    @id @default(cuid())
+  languageId    String
+  lessonId      String?
+  xp            Int       @default(0)
+  streak        Int       @default(0)
+  wordsLearned  Int       @default(0)
+  lastActiveAt  DateTime  @default(now())
+  dailyGoal     Int       @default(3)
+  dailyCompleted Int      @default(0)
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  language      Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  lesson        Lesson?   @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@unique([languageId, lessonId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  totalXP       Int       @default(0)
+  streak        Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  progress      UserProgress[]
+}
