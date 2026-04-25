@@ -35,10 +35,10 @@ export async function POST(request: NextRequest) {
       userProgress.dailyCompleted = 0;
     }
 
-    if (language && userProgress.languages[language]) {
-      userProgress.languages[language].wordsLearned += 1;
-      userProgress.languages[language].progress = Math.min(
-        userProgress.languages[language].progress + 1,
+    if (language && language in userProgress.languages) {
+      userProgress.languages[language as keyof typeof userProgress.languages].wordsLearned += 1;
+      userProgress.languages[language as keyof typeof userProgress.languages].progress = Math.min(
+        userProgress.languages[language as keyof typeof userProgress.languages].progress + 1,
         100
       );
     }
